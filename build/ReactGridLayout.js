@@ -346,22 +346,43 @@ var ReactGridLayout = (function(_React$Component) {
     var l = (0, _utils.getLayoutItem)(layout, i);
     if (!l) return;
 
-    // Short circuit if there is a collision in no rearrangement mode.
-    if (
-      preventCollision &&
-      (0, _utils.getFirstCollision)(layout, _extends({}, l, { w: w, h: h }))
-    ) {
-      return;
+    // Something like quad tree should be used
+    // to find collisions faster
+    var hasCollisions = void 0;
+    if (preventCollision) {
+      var collisions = (0, _utils.getAllCollisions)(
+        layout,
+        _extends({}, l, { w: w, h: h })
+      ).filter(function(layoutItem) {
+        return layoutItem.i !== l.i;
+      });
+      hasCollisions = collisions.length > 0;
+
+      // If we're colliding, we need adjust the placeholder.
+      if (hasCollisions) {
+        // adjust w && h to maximum allowed space
+        var leastX = Infinity,
+          leastY = Infinity;
+        collisions.forEach(function(layoutItem) {
+          if (layoutItem.x > l.x) leastX = Math.min(leastX, layoutItem.x);
+          if (layoutItem.y > l.y) leastY = Math.min(leastY, layoutItem.y);
+        });
+
+        if (Number.isFinite(leastX)) l.w = leastX - l.x;
+        if (Number.isFinite(leastY)) l.h = leastY - l.y;
+      }
     }
 
-    // Set new width and height.
-    l.w = w;
-    l.h = h;
+    if (!hasCollisions) {
+      // Set new width and height.
+      l.w = w;
+      l.h = h;
+    }
 
     // Create placeholder element (display only)
     var placeholder = {
-      w: w,
-      h: h,
+      w: l.w,
+      h: l.h,
       x: l.x,
       y: l.y,
       static: true,
